@@ -1,40 +1,44 @@
-
-#define IR_PIN_STANGA (0x04)
-#define IR_PIN_CENTRU (0x02)
-#define IR_PIN_DREAPTA (0x01)
+#define IR_PIN_STANGA (0x04) //senzor linie
+#define IR_PIN_CENTRU (0x02)  //senzor linie
+#define IR_PIN_DREAPTA (0x01)  //senzor linie
 #define MOTOR_IN1 (0x10)
 #define MOTOR_IN2 (0x20)
 #define MOTOR_IN3 (0x40)
 #define MOTOR_IN4 (0x80)
-#define MOTOR_SPEED (95) // Intre [0 - 255]
+#define MOTOR_SPEED_DR (110)
+#define MOTOR_SPEED_ST (90)// Intre [0 - 255]
+#define MOTOR_SPEED_START_DR (120)
+#define MOTOR_SPEED_START_ST (100)
 
-int l,c,r;
+int l, c, r; //senzorii linie, l->stanga,c->centru, r->dreapta
 
 void clearRegisters() {
   DDRB = 0;
   DDRC = 0;
   DDRD = 0;
-
+  TCCR0A = 0;
+  TCCR1A = 0;
   TCCR1A = 0;
   TCCR1B = 0;
   TCCR2A = 0;
   TCCR2B = 0;
 
- // ADMUX = 0;
+  // ADMUX = 0;
 }
 
 void motorInit() {
   noInterrupts(); // Dezactiveaza toate intreruperile
 
-  DDRD |= 0xF0;  // Pin 4,5,6,7 iesire pentru in1, in2, in3, in4 directie motor
-  DDRD |= 0x08;  // Pin  3 - PWM output A 
-  DDRB |= 0x08;  // Pin 11 - PWM output B
-  
-  TCCR2A |= (1 << WGM21) | (1 << WGM20);   // Setez fast pwm mode
+  DDRD |= 0xF0; // Pin 4,5,6,7 iesire pentru in1, in2, in3, in4 directie motor
+  DDRD |= 0x08; // Pin  3 - PWM output A 
+  DDRB |= 0x08; // Pin 11 - PWM output B
+  //TIMSK0=1;
+
+  TCCR2A |= (1 << WGM21) | (1 << WGM20); // Setez fast pwm mode
   TCCR2A |= (1 << COM2A1) | (1 << COM2B1); // Activez ambele canale A=pin 3 si B=pin 11
-  TCCR2B |= (1 << CS22) | (1 << CS20);     // Setez prescaler (128)
-  OCR2A = MOTOR_SPEED; // Viteza motorului drept
-  OCR2B = MOTOR_SPEED; // Viteza motorului stang
+  TCCR2B |= (1 << CS22) | (1 << CS20); // Setez prescaler (128)
+  OCR2A = MOTOR_SPEED_ST; // Viteza motorului drept
+  OCR2B = MOTOR_SPEED_DR; // Viteza motorului stang
 
   interrupts();
 }
@@ -43,118 +47,130 @@ void motorStop() {
   PORTD &= ~0xF0;
 }
 
-void motorFata(){
+void motorFata() {
+
   motorStop();
   PORTD |= MOTOR_IN1;
   PORTD |= MOTOR_IN3;
+
 }
 
-void motorSpate(){
+void motorSpate() {
   motorStop();
   PORTD |= MOTOR_IN2;
   PORTD |= MOTOR_IN4;
 }
 
-void motorStanga(){
+void motorStanga() {
 
   motorStop();
   PORTD |= MOTOR_IN1;
   PORTD |= MOTOR_IN4;
 }
 
-void motorDreapta(){
+void motorDreapta() {
   motorStop();
   PORTD |= MOTOR_IN2;
   PORTD |= MOTOR_IN3;
 }
 
+void motorCurba() {
+  motorStop();
+  PORTD |= MOTOR_IN2;
+  PORTD |= MOTOR_IN3;
+}
 
+//Cand senzorul va fi pe culaore neagra, variabila va avea valoarea 1
+//Cand senzorul va fi pe culoare alba, variabila va avea valoarea 0
+//c-> centru;  r->rigt; l->left
 
-int trackingSensor() 
-
-{
-
-  int irValst = (PIND & IR_PIN_STANGA);
-  if(irValst == IR_PIN_STANGA) {
+int trackingSensor() {
+  int irVal_st = (PIND & IR_PIN_STANGA);
+  if (irVal_st == IR_PIN_STANGA) {
     PORTD &= ~0x04;
-    l=01;//------------------------STANGA ALB 1
-   // Serial.println(l);
-     // alb
+    l = 0; //------------------------STANGA ALB 1
   } else {
-    PORTB|=0x04;
-    l=11; //------------------------STANGA NEGRU 11
-    //Serial.println(l);
-     // negru
-
+    PORTB |= 0x04;
+    l = 1; //------------------------STANGA NEGRU 11
   }
-    int irValdr = (PINB & IR_PIN_DREAPTA);
-    if(irValdr == IR_PIN_DREAPTA) {
+  int irVal_dr = (PINB & IR_PIN_DREAPTA);
+  if (irVal_dr == IR_PIN_DREAPTA) {
     PORTB &= ~0x01;
-    r=02; //------------------------DREAPTA ALB 2
-    //Serial.println(r);
-     // alb
+    r = 0; //------------------------DREAPTA ALB 2
   } else {
-    PORTB|=0x01;
-    r=12; //------------------------DREAPTA NEGRU 12
-    //Serial.println(r);
-     // negru
+    PORTB |= 0x01;
+    r = 1; //------------------------DREAPTA NEGRU 12
   }
-    int irValc = (PINB & IR_PIN_CENTRU);
-    if(irValc == IR_PIN_CENTRU) {
+  int irVal_c = (PINB & IR_PIN_CENTRU);
+  if (irVal_c == IR_PIN_CENTRU) {
     PORTB &= ~0x02;
-    c=03;//------------------------CENTRU ALB 3
-   // Serial.println(c);
-     // alb
+    c = 0; //------------------------CENTRU ALB 3
   } else {
-    PORTB|=0x02;
-    c=13;//------------------------CENTRU NEGRU 13
-   // Serial.println(c);
-     // negru
+    PORTB |= 0x02;
+    c = 1; //------------------------CENTRU NEGRU 13
   }
-   if(c && !l && !r){
-     motorDreapta();
-     /* Serial.println(c);
-     Serial.println(l);
-     Serial.println(r); */
-  }
-  else 
-  {
-    if(l && !c && !r){
- /* Serial.println(c);
-     Serial.println(l);
-     Serial.println(r); */
-  motorDreapta();
-    }
-  else {
-    if(r && !c && !l){
-      /* Serial.println(c);
-     Serial.println(l);
-     Serial.println(r); */
+
+  if (c && !l && !r) {
     motorFata();
+  } else {
+    if (l && !c && !r) {
+      motorStanga();
+    } else {
+      if (r && !c && !l) {
+        motorDreapta();
+      } else {
+        if (l && c && !r) {
+          motorStanga();
+        } else {
+          if (!l && c && r) {
+            motorDreapta();
+          } else {
+            motorStop();
+          }
+        }
+      }
     }
-    else{
-     /*  Serial.println(c);
-     Serial.println(l);
-     Serial.println(r); */
-    motorStop();
-  }
-}
   }
 }
 
-void ir_setup(){
-  DDRD&=~0x04; //pin 3 input ir senzor stanga
-  DDRB&=~0x03; //pin 8 si 9 input pt centru si dreapta
+void waitUS(unsigned long microsec) {
+  unsigned long time = micros();
+  while (micros() - time < microsec) {
+    // Asteapta...
+  }
+}
+void waitMS(unsigned long milisec) {
+  unsigned long time = millis();
+  while (millis() - time < milisec) {
+    // Asteapta...
+  }
+}
+void ir_setup() {
+  DDRD &= ~0x04; //pin d2 input ir senzor stanga
+  DDRB &= ~0x03; //pin 8 si 9 input pt centru si dreapta
 }
 void setup() {
-  Serial.begin(9600);
+  // Serial.begin(9600);
+  clearRegisters();
   ir_setup();
+  motorInit();
 
 }
 
-  
+int robot_oprit = 1;
+
 void loop() {
-  //int a=2;
-  //Serial.println(a);
+
+  motorFata();
   trackingSensor();
+
+  if (robot_oprit) {
+    OCR2B = MOTOR_SPEED_START_DR; // Viteza motorului drept start
+    OCR2A = MOTOR_SPEED_START_ST; // Viteza motorului stang start
+    waitMS(100); 
+    OCR2B = MOTOR_SPEED_DR; // Viteza motorului drept
+    OCR2A = MOTOR_SPEED_ST; //Viteza motorului stang
+    trackingSensor();
+    robot_oprit = 0;
+  }
 }
