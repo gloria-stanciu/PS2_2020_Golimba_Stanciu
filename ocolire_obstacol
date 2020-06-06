@@ -12,7 +12,7 @@
 #define TRIGGER_VALUE (0x10)
 #define ECHO_VALUE (0x20)
 #define DIST_INF (9999)
-#define LUNGIME_OBSTACOL(1000)  //aici se poate regla distanta pe care o parcurge pe contrasens in functie de lungimea obstacolului
+#define LUNGIME_OBSTACOL 1000  //aici se poate regla distanta pe care o parcurge pe contrasens in functie de lungimea obstacolului
 int l, c, r; //senzorii linie, l->stanga,c->centru, r->dreapta
 long timer1_ovf = 0;
 int state = 0;
